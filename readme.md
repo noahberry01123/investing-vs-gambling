@@ -79,7 +79,7 @@ inflation series are baked in as JavaScript constants, so the widget makes **no 
 calls** and stores no data — its only external dependency is
 [Chart.js](https://www.chartjs.org/) (4.4.4), loaded from a CDN to draw the graph.
 No build step, no framework, no tracking. The layout is responsive (max-width 760px)
-and works on mobile, which makes it suitable for embedding in an article column.
+and works on mobile.
 
 ## License
 
