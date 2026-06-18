@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Marble Jar — Expected Value &amp; the Law of Large Numbers</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e4e7eb; --accent:#3d5a80; --accent-soft:#e8edf4;
+    --green:#2f7d4f; --green-soft:#e6f1ea; --red:#b3403a; --red-soft:#f7e9e8;
+    --pos:#2f7d4f; --neg:#b3403a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.45; padding:18px;
+  }
+  .wrap{max-width:780px; margin:0 auto;}
+  .topnav{margin:0 0 16px; display:flex; flex-wrap:wrap; gap:8px 14px;
+    align-items:center; justify-content:space-between;}
+  .topnav .brand{font-weight:700; font-size:.86rem; color:var(--ink); text-decoration:none;}
+  .topnav .brand span{color:var(--muted); font-weight:600;}
+  .topnav .tabs{display:inline-flex; background:var(--accent-soft); border-radius:999px; padding:4px; gap:4px;}
+  .topnav .tab{font-size:.8rem; font-weight:600; color:var(--muted); text-decoration:none;
+    padding:6px 13px; border-radius:999px; white-space:nowrap; transition:all .15s;}
+  .topnav .tab:hover{color:var(--ink);}
+  .topnav .tab.active{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  header h1{font-size:1.25rem; margin:0 0 4px;}
+  header p{margin:0 0 18px; color:var(--muted); font-size:.85rem;}
+
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:18px; margin-bottom:16px;}
+  .panel h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); margin:0 0 14px;}
+
+  label.fld{display:block; font-size:.78rem; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+
+  .cfg-grid{display:flex; flex-wrap:wrap; gap:18px 26px;}
+  .cfg{flex:1 1 220px; min-width:200px;}
+  .val-line{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
+  .val-big{font-size:1.5rem; font-weight:700; line-height:1;}
+  .val-big.green{color:var(--green);} .val-big.red{color:var(--red);}
+  input[type=number]{width:74px; font-size:.95rem; padding:4px 6px;
+    border:1px solid var(--line); border-radius:6px; text-align:center;}
+  input[type=range]{width:100%; margin:0;}
+  #greenRange{accent-color:var(--green);} #redRange{accent-color:var(--red);}
+  #drawsRange{accent-color:var(--accent);}
+  .payouts{display:flex; gap:14px; flex-wrap:wrap;}
+  .payouts .pay{flex:1 1 90px;}
+
+  /* EV banner */
+  .ev-banner{display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px;
+    margin-top:16px; padding:14px 16px; border-radius:10px; background:var(--accent-soft);}
+  .ev-num{font-size:1.7rem; font-weight:800; line-height:1;}
+  .ev-num.pos{color:var(--pos);} .ev-num.neg{color:var(--neg);} .ev-num.zero{color:var(--muted);}
+  .ev-k{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);}
+  .verdict{font-size:.9rem; font-weight:600;}
+  .verdict.pos{color:var(--pos);} .verdict.neg{color:var(--neg);} .verdict.zero{color:var(--muted);}
+
+  /* jar */
+  .jar{margin-top:14px; padding:10px 12px 12px; border:1px solid var(--line);
+    border-radius:14px; background:#fbfcfd; text-align:center;}
+  #jarSvg{width:100%; max-width:220px; height:auto; display:inline-block;}
+  .jar-cap{text-align:center; font-size:.74rem; color:var(--muted); margin-top:6px;}
+
+  /* buttons */
+  .btns{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  button.act{border:1px solid var(--accent); background:var(--accent); color:#fff;
+    font:inherit; font-size:.86rem; font-weight:600; padding:9px 16px; border-radius:8px;
+    cursor:pointer; transition:filter .15s;}
+  button.act:hover{filter:brightness(1.08);}
+  button.act.ghost{background:#fff; color:var(--accent);}
+  button.act:disabled{opacity:.45; cursor:not-allowed; filter:none;}
+
+  /* pull-a-marble */
+  .pull-row{display:flex; flex-wrap:wrap; gap:20px; align-items:center;}
+  .drawn{width:84px; height:84px; border-radius:50%; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-weight:800;
+    font-size:1.05rem; color:#fff; background:#cbd2d9; box-shadow:inset 0 -6px 12px rgba(0,0,0,.12);
+    transition:transform .12s;}
+  .drawn.pop{transform:scale(1.12);}
+  .drawn.g{background:var(--green);} .drawn.r{background:var(--red);}
+  .pull-stats{flex:1 1 200px;}
+  .pull-net{font-size:1.9rem; font-weight:800; line-height:1;}
+  .pull-net.pos{color:var(--pos);} .pull-net.neg{color:var(--neg);}
+  .pull-sub{font-size:.78rem; color:var(--muted); margin-top:4px;}
+  .chips{display:flex; flex-wrap:wrap; gap:3px; margin-top:10px; min-height:12px;}
+  .chip{width:10px; height:10px; border-radius:2px;}
+  .chip.g{background:var(--green);} .chip.r{background:var(--red);}
+
+  /* run game */
+  .toggle-wrap{margin:4px 0 12px;}
+  .switch{display:inline-flex; background:var(--accent-soft); border-radius:999px; padding:4px; gap:4px;}
+  .switch button{border:none; background:transparent; cursor:pointer; font:inherit;
+    font-size:.8rem; font-weight:600; color:var(--muted); padding:6px 13px; border-radius:999px;
+    transition:all .15s;}
+  .switch button[aria-pressed="true"]{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .chart-box{position:relative; width:100%; height:320px; margin-top:6px;}
+
+  .stats{display:flex; flex-wrap:wrap; gap:12px; margin-top:14px;}
+  .stat{flex:1 1 140px; background:#fbfcfd; border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px;}
+  .stat .k{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:5px;}
+  .stat .v{font-size:1.3rem; font-weight:700; line-height:1.1;}
+  .stat .v.pos{color:var(--pos);} .stat .v.neg{color:var(--neg);}
+  .stat .sub{font-size:.72rem; color:var(--muted); margin-top:3px;}
+
+  .note{font-size:.8rem; padding:10px 12px; border-radius:8px; margin-top:14px;
+    background:#fdf3e7; border:1px solid #f0d9b5; color:#7a531a;}
+  .note.hidden{display:none;}
+
+  footer{font-size:.72rem; color:var(--muted); margin-top:8px;}
+  footer p{margin:6px 0;}
+  @media (max-width:480px){
+    body{padding:12px;}
+    .pull-net{font-size:1.6rem;} .val-big{font-size:1.3rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="index.html">Investing vs Gambling <span>· interactive tools</span></a>
+    <div class="tabs">
+      <a class="tab active" href="marble_jar_widget.html">Marble Jar</a>
+      <a class="tab" href="sp500_widget.html">S&amp;P 500 Explorer</a>
+    </div>
+  </nav>
+  <header>
+    <h1>The Marble Jar</h1>
+    <p>Build a jar of winning (green) and losing (red) marbles, pull from it, and watch how your results converge toward the jar's <strong>expected value</strong> over many draws. Every draw is independent and the marble goes back in — exactly like the jar in the article.</p>
+  </header>
+
+  <!-- CONFIG -->
+  <div class="panel">
+    <h2>1 · Build your jar</h2>
+    <div class="cfg-grid">
+      <div class="cfg">
+        <label class="fld" for="greenRange">Green marbles — win</label>
+        <div class="val-line"><span class="val-big green" id="greenBig">60</span>
+          <input type="number" id="greenNum" min="0" max="100" value="60"></div>
+        <input type="range" id="greenRange" min="0" max="100" value="60">
+      </div>
+      <div class="cfg">
+        <label class="fld" for="redRange">Red marbles — lose</label>
+        <div class="val-line"><span class="val-big red" id="redBig">40</span>
+          <input type="number" id="redNum" min="0" max="100" value="40"></div>
+        <input type="range" id="redRange" min="0" max="100" value="40">
+      </div>
+      <div class="cfg">
+        <label class="fld">Payouts ($ per marble)</label>
+        <div class="payouts">
+          <div class="pay">
+            <div class="pull-sub" style="margin:0 0 4px">Win (green)</div>
+            <input type="number" id="winAmt" min="0" step="0.5" value="1">
+          </div>
+          <div class="pay">
+            <div class="pull-sub" style="margin:0 0 4px">Lose (red)</div>
+            <input type="number" id="loseAmt" min="0" step="0.5" value="1">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ev-banner">
+      <div><div class="ev-k">Expected value / draw</div><div class="ev-num" id="evNum">+$0.20</div></div>
+      <div><div class="ev-k">Win chance</div><div class="ev-num" id="winPct" style="font-size:1.2rem;color:var(--ink)">60%</div></div>
+      <div class="verdict" id="verdict">Positive expected value — the jar tilts in your favor.</div>
+    </div>
+
+    <div class="jar">
+      <svg id="jarSvg" viewBox="0 0 240 270" role="img" aria-label="Jar of marbles">
+        <defs>
+          <clipPath id="jarClip">
+            <path d="M60,90 C60,74 78,66 120,66 C162,66 180,74 180,90 L180,222 C180,240 168,250 120,250 C72,250 60,240 60,222 Z"/>
+          </clipPath>
+          <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#eef3f7"/>
+            <stop offset="0.5" stop-color="#f8fbfc"/>
+            <stop offset="1" stop-color="#e2e9ef"/>
+          </linearGradient>
+        </defs>
+        <!-- lid -->
+        <rect x="80" y="38" width="80" height="22" rx="7" fill="#c4ccd5"/>
+        <rect x="72" y="55" width="96" height="13" rx="4" fill="#aeb8c3"/>
+        <!-- glass body -->
+        <path d="M60,90 C60,74 78,66 120,66 C162,66 180,74 180,90 L180,222 C180,240 168,250 120,250 C72,250 60,240 60,222 Z"
+              fill="url(#glassGrad)" stroke="#cfd8e0" stroke-width="2"/>
+        <!-- marbles (filled by JS) -->
+        <g clip-path="url(#jarClip)" id="marbleGroup"></g>
+        <!-- glass sheen -->
+        <path d="M75,98 C70,150 70,200 82,236" fill="none" stroke="rgba(255,255,255,0.6)"
+              stroke-width="6" stroke-linecap="round" opacity="0.65" pointer-events="none"/>
+        <!-- outline on top -->
+        <path d="M60,90 C60,74 78,66 120,66 C162,66 180,74 180,90 L180,222 C180,240 168,250 120,250 C72,250 60,240 60,222 Z"
+              fill="none" stroke="#b6c0cb" stroke-width="2.5" pointer-events="none"/>
+      </svg>
+      <div class="jar-cap" id="jarCap"></div>
+    </div>
+  </div>
+
+  <!-- PULL ONE -->
+  <div class="panel">
+    <h2>2 · Pull marbles by hand</h2>
+    <div class="pull-row">
+      <div class="drawn" id="drawn">—</div>
+      <div class="pull-stats">
+        <div class="pull-net" id="pullNet">$0.00</div>
+        <div class="pull-sub" id="pullSub">0 draws · feel the variance of a small number of draws</div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+    <div class="btns" style="margin-top:16px">
+      <button class="act" id="pull1">Pull a marble</button>
+      <button class="act ghost" id="pull10">Pull 10</button>
+      <button class="act ghost" id="resetHand">Reset hand</button>
+    </div>
+  </div>
+
+  <!-- RUN MANY -->
+  <div class="panel">
+    <h2>3 · Run the long game</h2>
+    <div class="cfg-grid" style="margin-bottom:8px">
+      <div class="cfg">
+        <label class="fld" for="drawsRange">Number of draws</label>
+        <div class="val-line"><span class="val-big" id="drawsBig">1,000</span>
+          <input type="number" id="drawsNum" min="10" max="10000" step="10" value="1000"></div>
+        <input type="range" id="drawsRange" min="10" max="10000" step="10" value="1000">
+      </div>
+    </div>
+
+    <div class="toggle-wrap">
+      <label class="fld">Chart view</label>
+      <div class="switch" role="group" aria-label="Chart view">
+        <button id="viewCum" aria-pressed="true">Cumulative $</button>
+        <button id="viewAvg" aria-pressed="false">Average per draw</button>
+      </div>
+    </div>
+
+    <div class="chart-box"><canvas id="chart"></canvas></div>
+
+    <div class="btns" style="margin-top:14px">
+      <button class="act" id="runBtn">Run simulation</button>
+      <button class="act ghost" id="resetRun">Clear</button>
+    </div>
+
+    <div class="stats" id="statsRow" style="display:none">
+      <div class="stat"><div class="k">Expected end balance</div>
+        <div class="v" id="stExp">—</div><div class="sub">draws × EV</div></div>
+      <div class="stat"><div class="k">Your end balance</div>
+        <div class="v" id="stEnd">—</div><div class="sub" id="stEndSub">after the run</div></div>
+      <div class="stat"><div class="k">Your average / draw</div>
+        <div class="v" id="stAvg">—</div><div class="sub" id="stAvgSub">expected ≈ —</div></div>
+      <div class="stat"><div class="k">Marbles drawn</div>
+        <div class="v" id="stDrawn" style="font-size:1rem">—</div><div class="sub">green vs red</div></div>
+    </div>
+
+    <div class="note hidden" id="emptyNote"></div>
+  </div>
+
+  <footer>
+    <p><strong>What this shows.</strong> Each draw is an independent event with replacement, so the jar's odds never change — there is no "due" outcome (the gambler's fallacy). On any single draw or short streak, <em>variance</em> dominates and anything can happen. But as the number of draws grows, the <strong>law of large numbers</strong> pulls your observed average toward the jar's expected value. Switch to "Average per draw" to watch your path squeeze toward the dashed expected-value line.</p>
+    <p><strong>Why it matters.</strong> A jar with more green than red (positive expected value) is an <em>investing</em>-like system: time and repetition work for you. A jar with more red than green (negative expected value — most casino games and pull tabs) is a <em>gambling</em>-like system: the same law of large numbers steadily converges your results toward a loss. Same math, opposite sign.</p>
+    <p><em>Note: outcomes are simulated live using your browser's random-number generator, so each run differs. This is an illustration of probability, not market data.</em></p>
+  </footer>
+</div>
+
+<script>
+/* ---------- Config state ---------- */
+const $=id=>document.getElementById(id);
+let green=60, red=40, winAmt=1, loseAmt=1;
+let view='cum';                       // 'cum' | 'avg'
+let sim=null;                         // last simulation result
+let chart, revealTimer=null;
+
+const money=x=>(x<0?'-$':'$')+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const moneyShort=x=>(x<0?'-$':'$')+Math.abs(x).toLocaleString('en-US',{maximumFractionDigits:0});
+
+function total(){return green+red;}
+function pWin(){return total()>0?green/total():0;}
+function ev(){return total()>0?pWin()*winAmt-(1-pWin())*loseAmt:0;}
+
+/* ---------- Config UI ---------- */
+function syncPair(rangeId,numId,bigId,setter){
+  function set(raw,fromRange){
+    const empty=(raw===''||raw==null);
+    let v=empty?0:Math.round(+raw);
+    if(isNaN(v))v=0;
+    v=Math.max(0,Math.min(100,v));
+    setter(v);
+    $(rangeId).value=v;
+    if(bigId)$(bigId).textContent=v;
+    if(!empty||fromRange)$(numId).value=v;   // leave the box empty while the user clears it
+    updateConfig();
+  }
+  $(rangeId).addEventListener('input',e=>set(e.target.value,true));
+  $(numId).addEventListener('input',e=>set(e.target.value,false));
+  $(numId).addEventListener('blur',()=>{ if($(numId).value.trim()===''){$(numId).value=0;} });
+}
+syncPair('greenRange','greenNum','greenBig',v=>green=v);
+syncPair('redRange','redNum','redBig',v=>red=v);
+$('winAmt').addEventListener('input',e=>{winAmt=Math.max(0,+e.target.value||0); updateConfig();});
+$('loseAmt').addEventListener('input',e=>{loseAmt=Math.max(0,+e.target.value||0); updateConfig();});
+
+function updateConfig(){
+  const e=ev(), t=total();
+  // EV banner
+  const evEl=$('evNum');
+  evEl.textContent=(e>=0?'+':'-')+'$'+Math.abs(e).toFixed(2);
+  evEl.className='ev-num '+(Math.abs(e)<1e-9?'zero':(e>0?'pos':'neg'));
+  $('winPct').textContent=(pWin()*100).toFixed(0)+'%';
+  const v=$('verdict');
+  if(t===0){v.textContent='Add some marbles to the jar.'; v.className='verdict zero';}
+  else if(Math.abs(e)<1e-9){v.textContent='Break-even — a fair game with zero edge either way.'; v.className='verdict zero';}
+  else if(e>0){v.textContent='Positive expected value — the jar tilts in your favor (investing-like).'; v.className='verdict pos';}
+  else{v.textContent='Negative expected value — the jar tilts against you (gambling-like).'; v.className='verdict neg';}
+  drawJar();
+  const noMarbles=(t===0);
+  ['pull1','pull10','runBtn'].forEach(id=>$(id).disabled=noMarbles);
+}
+
+const SVGNS='http://www.w3.org/2000/svg';
+function drawJar(){
+  const t=total();
+  const grp=$('marbleGroup'); while(grp.firstChild)grp.removeChild(grp.firstChild);
+  if(t===0){ $('jarCap').textContent='Empty jar — add some marbles above.'; return; }
+  // marble grid inside the jar interior (hex-packed, filled bottom-up)
+  const L=70,R=170,bottomY=244,topLimit=92,r=7.5,step=15.5;
+  const cols=Math.floor((R-L)/step);
+  const usedW=(cols-1)*step;
+  const x0=L+(R-L-usedW)/2;
+  const maxRows=Math.floor((bottomY-r-topLimit)/step)+1;
+  const capacity=(cols-1)*maxRows;            // conservative so every shown marble fits
+  const show=Math.min(t,capacity);
+  const gShown=Math.round(show*pWin());
+  // colour sequence with exactly gShown greens, spread evenly through the reds
+  const seq=[]; let placedG=0;
+  for(let i=1;i<=show;i++){
+    const wantG=Math.round(i*gShown/show);
+    if(wantG>placedG && placedG<gShown){seq.push(1);placedG++;} else seq.push(0);
+  }
+  let idx=0;
+  for(let row=0; row<maxRows && idx<show; row++){
+    const cy=bottomY-r-row*step;
+    const offset=(row%2)?step/2:0;
+    for(let c=0;c<cols && idx<show;c++){
+      const cx=x0+c*step+offset;
+      if(cx>R-r) break;                       // would overflow the side; next row
+      const isG=seq[idx]===1;
+      const m=document.createElementNS(SVGNS,'circle');
+      m.setAttribute('cx',cx.toFixed(1)); m.setAttribute('cy',cy.toFixed(1)); m.setAttribute('r',r);
+      m.setAttribute('fill',isG?'#2f7d4f':'#b3403a');
+      grp.appendChild(m);
+      const hl=document.createElementNS(SVGNS,'circle');
+      hl.setAttribute('cx',(cx-r*0.32).toFixed(1)); hl.setAttribute('cy',(cy-r*0.32).toFixed(1));
+      hl.setAttribute('r',(r*0.28).toFixed(1)); hl.setAttribute('fill','rgba(255,255,255,0.55)');
+      grp.appendChild(hl);
+      idx++;
+    }
+  }
+  const scaled=show<t;
+  $('jarCap').textContent=
+    `${green} green (win ${money(winAmt)}) · ${red} red (lose ${money(loseAmt)}) · ${(pWin()*100).toFixed(1)}% win chance`
+    +(scaled?' · shown to scale':'');
+}
+
+/* ---------- Pull by hand ---------- */
+let handNet=0, handDraws=0, recent=[];
+function pullOne(animate){
+  if(total()===0) return;
+  const win=Math.random()<pWin();
+  handNet+=win?winAmt:-loseAmt; handDraws++;
+  recent.push(win); if(recent.length>40) recent.shift();
+  if(animate){
+    const d=$('drawn');
+    d.className='drawn '+(win?'g':'r')+' pop';
+    d.textContent=(win?'+':'−')+'$'+(win?winAmt:loseAmt);
+    setTimeout(()=>d.classList.remove('pop'),130);
+  }
+  renderHand();
+}
+function renderHand(){
+  const n=$('pullNet'); n.textContent=money(handNet);
+  n.className='pull-net '+(handNet>0?'pos':(handNet<0?'neg':''));
+  const expSoFar=handDraws*ev();
+  $('pullSub').textContent=`${handDraws} draw${handDraws===1?'':'s'} · expected ≈ ${money(expSoFar)} · short runs are noisy`;
+  const c=$('chips'); c.innerHTML='';
+  const frag=document.createDocumentFragment();
+  recent.forEach(w=>{const s=document.createElement('span'); s.className='chip '+(w?'g':'r'); frag.appendChild(s);});
+  c.appendChild(frag);
+}
+$('pull1').addEventListener('click',()=>pullOne(true));
+$('pull10').addEventListener('click',()=>{for(let i=0;i<10;i++)pullOne(i===9);});
+$('resetHand').addEventListener('click',()=>{
+  handNet=0; handDraws=0; recent=[];
+  const d=$('drawn'); d.className='drawn'; d.textContent='—'; renderHand();
+});
+
+/* ---------- Run many ---------- */
+function syncRun(rangeId,numId,bigId,min,max,setter){
+  function set(raw,fromRange){
+    const empty=(raw===''||raw==null);
+    let v=empty?min:Math.round(+raw);
+    if(isNaN(v))v=min;
+    v=Math.max(min,Math.min(max,v));
+    setter(v);
+    $(rangeId).value=v;
+    $(bigId).textContent=v.toLocaleString('en-US');
+    if(!empty||fromRange)$(numId).value=v;   // leave the box empty while the user clears it
+  }
+  $(rangeId).addEventListener('input',e=>set(e.target.value,true));
+  $(numId).addEventListener('input',e=>set(e.target.value,false));
+  $(numId).addEventListener('blur',()=>{ if($(numId).value.trim()===''){$(numId).value=min;} });
+}
+let nDraws=1000;
+syncRun('drawsRange','drawsNum','drawsBig',10,10000,v=>nDraws=v);
+
+function simulate(){
+  const p=pWin(), w=winAmt, l=loseAmt;
+  const every=Math.max(1,Math.floor(nDraws/300));
+  let sum=0, wins=0;
+  const sampleDraws=[], sampleVals=[];
+  for(let i=1;i<=nDraws;i++){
+    if(Math.random()<p){ sum+=w; wins++; } else { sum-=l; }
+    if(i%every===0 || i===nDraws){ sampleDraws.push(i); sampleVals.push(sum); }
+  }
+  return {sampleDraws,sampleVals,final:sum,wins,losses:nDraws-wins,ev:ev(),nDraws};
+}
+
+function buildDatasets(s,upto){
+  const k=upto==null?s.sampleVals.length:upto;
+  const vals=s.sampleVals.slice(0,k);
+  const draws=s.sampleDraws.slice(0,k);
+  const path=vals.map((v,idx)=> view==='avg'? v/draws[idx] : v);
+  const evLine=draws.map(d=> view==='avg'? s.ev : d*s.ev);
+  return {labels:draws,datasets:[
+    {label:'Your run',data:path,borderColor:'#3d5a80',borderWidth:2.5,pointRadius:0,
+      tension:.1,fill:false,order:1},
+    {label:'Expected value',data:evLine,borderColor:'#9aa5b1',borderWidth:2,
+      borderDash:[6,5],pointRadius:0,tension:0,fill:false,order:2},
+  ]};
+}
+
+function drawChart(s,upto){
+  const cfg=buildDatasets(s,upto);
+  const opts={
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'nearest',intersect:false},
+    plugins:{
+      legend:{display:true,labels:{boxWidth:12,font:{size:11}}},
+      tooltip:{callbacks:{
+        title:items=>'After '+(+items[0].label).toLocaleString('en-US')+' draws',
+        label:c=>{ if(c.dataset.label) return c.dataset.label+': '+
+          (view==='avg'? '$'+c.parsed.y.toFixed(3)+'/draw' : money(c.parsed.y)); return null; }}}
+    },
+    scales:{
+      x:{title:{display:true,text:'Number of draws',font:{size:11}},
+        grid:{display:false},ticks:{font:{size:10},maxRotation:0,autoSkipPadding:18,
+          callback:function(v){return (+this.getLabelForValue(v)).toLocaleString('en-US');}}},
+      y:{title:{display:true,text:view==='avg'?'Average $ per draw':'Cumulative $',font:{size:11}},
+        grid:{color:'#eef1f4'},ticks:{font:{size:10},
+          callback:v=> view==='avg'? '$'+(+v).toFixed(2) : moneyShort(v)}}
+    }
+  };
+  const data={labels:cfg.labels,datasets:cfg.datasets};
+  if(chart){chart.data=data; chart.options=opts; chart.update('none');}
+  else{chart=new Chart($('chart'),{type:'line',data,options:opts});}
+}
+
+function showStats(s){
+  $('statsRow').style.display='flex';
+  const expEnd=s.nDraws*s.ev;
+  $('stExp').textContent=money(expEnd);
+  $('stExp').className='v '+(expEnd>0?'pos':(expEnd<0?'neg':''));
+  $('stEnd').textContent=money(s.final);
+  $('stEnd').className='v '+(s.final>0?'pos':(s.final<0?'neg':''));
+  $('stEndSub').textContent=s.nDraws.toLocaleString('en-US')+' draws';
+  const avg=s.final/s.nDraws;
+  $('stAvg').textContent=(avg<0?'-$':'$')+Math.abs(avg).toFixed(3);
+  $('stAvg').className='v '+(avg>0?'pos':(avg<0?'neg':''));
+  $('stAvgSub').textContent='expected ≈ '+(s.ev<0?'-$':'$')+Math.abs(s.ev).toFixed(3)+' / draw';
+  $('stDrawn').textContent=s.wins.toLocaleString('en-US')+' green · '+s.losses.toLocaleString('en-US')+' red';
+}
+
+function run(){
+  if(total()===0) return;
+  if(revealTimer){clearInterval(revealTimer); revealTimer=null;}
+  $('emptyNote').classList.add('hidden');
+  $('runBtn').disabled=true; $('runBtn').textContent='Running…';
+  sim=simulate();
+  showStats(sim);
+  // animated reveal of the sampled path
+  const n=sim.sampleVals.length; let k=1;
+  const stepK=Math.max(1,Math.round(n/60));
+  drawChart(sim,k);
+  revealTimer=setInterval(()=>{
+    k+=stepK;
+    if(k>=n){k=n; clearInterval(revealTimer); revealTimer=null; $('runBtn').disabled=false; $('runBtn').textContent='Run simulation';}
+    drawChart(sim,k);
+  },25);
+}
+$('runBtn').addEventListener('click',run);
+$('resetRun').addEventListener('click',()=>{
+  if(revealTimer){clearInterval(revealTimer); revealTimer=null;}
+  sim=null; if(chart){chart.destroy(); chart=null;}
+  $('statsRow').style.display='none';
+  $('runBtn').disabled=total()===0; $('runBtn').textContent='Run simulation';
+});
+
+function setView(v){
+  view=v;
+  $('viewCum').setAttribute('aria-pressed',v==='cum');
+  $('viewAvg').setAttribute('aria-pressed',v==='avg');
+  if(sim) drawChart(sim,null);
+}
+$('viewCum').addEventListener('click',()=>setView('cum'));
+$('viewAvg').addEventListener('click',()=>setView('avg'));
+
+/* ---------- init ---------- */
+updateConfig();
+renderHand();
+</script>
+</body>
+</html>

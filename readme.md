@@ -1,86 +1,64 @@
-# S&P 500 — 20-Year Return Explorer
+# Investing vs Gambling — Interactive Tools
 
-An interactive widget for exploring how the S&P 500 performed over any 20-year
-holding period from 1928 to today — in nominal **and** inflation-adjusted dollars,
-with or without dividends reinvested.
+Two small, self-contained web tools about **expected value** and the **law of large
+numbers** — the ideas at the heart of the difference between investing and gambling.
+They accompany the article *“The Difference Between Investing and Gambling Is One Number.”*
 
-Pick a start year, flip a couple of toggles, and watch a $10,000 investment grow
-(or not) across the following two decades.
+**▶ [Open the tools](https://noahberry01123.github.io/investing-vs-gambling-tools/)**
 
-**▶ [Open the interactive tool](https://noahberry01123.github.io/SNP500-20-Year-Return-Widget/)**
+The landing page links to both tools, and every page has a tab bar at the top so you can
+switch between them. Each tool is a single HTML file with no dependencies except a
+CDN-hosted copy of Chart.js, so you can also download any file from this repo and open it
+directly in a browser — no server needed.
 
-> _The live link is served via GitHub Pages from `index.html` at the repo root. You can
-> also download `index.html` from this repo and open it directly in any browser — no
-> server needed._
+---
 
-## What you can do
+## The tools
 
-- **Choose any start year** (1928–2025) with a slider or by typing it in, and see
-  the next 20 years play out.
-- **Switch between nominal and real returns** — toggle inflation-adjusted (CPI-U)
-  dollars on or off to see how much purchasing power actually survived.
-- **Reinvest dividends** — toggle a constant 3%/yr reinvested dividend yield to
-  compare price-only growth against an approximate total return.
-- **Read the headline numbers** — cumulative return, annualized return (CAGR), and
-  what $10,000 turns into over the window.
-- **See the path, not just the endpoint** — a chart rebases the index to 100 at the
-  start year and compounds each year's return, so you can watch the drawdowns and
-  recoveries along the way.
+### 🫙 The Marble Jar — `marble_jar_widget.html`
+A probability sandbox. Build a jar of winning (green, **+$1**) and losing (red, **−$1**)
+marbles, then:
 
-Start years after 2006 don't yet have a full 20 years of data; the widget detects
-this and shows the partial window with a clear note instead of a misleading number.
+- **Pull marbles by hand** and watch a small number of draws stay noisy and unpredictable.
+- **Run the long game** (up to 10,000 draws) and watch your running result — in dollars —
+  converge toward the jar's expected value.
+- Toggle the chart between **cumulative dollars** and **average per draw** to see your path
+  squeeze toward the dashed expected-value line as the number of draws grows.
+- Configure the jar however you like (marble counts and payouts) to flip between a
+  positive-EV "investing-like" jar and a negative-EV "gambling-like" one.
 
-## What you'll discover
+### 📈 S&P 500 — 20-Year Return Explorer — `sp500_widget.html`
+Pick any start year from 1928 onward and see how the S&P 500 performed over the following
+20 years:
 
-Over the S&P 500's full history, a 20-year buy-and-hold has been remarkably
-reliable — but **not foolproof**, and the answer hinges on whether you measure in
-nominal or inflation-adjusted dollars (and whether you count dividends).
+- **Nominal or inflation-adjusted** (real) returns, via U.S. CPI-U.
+- **With or without dividends** reinvested (a simplifying 3%/yr assumption).
+- Cumulative return, annualized return, a line chart of a $10,000 investment, and a clear
+  note when a full 20-year window runs past the available data.
 
-Across the 79 complete 20-year windows (start years 1928–2006), **price return only**:
+---
 
-- **Nominal:** only **3** windows ended below where they started — those beginning
-  in **1928, 1929, and 1930**, swallowed by the Great Crash and Depression. Every
-  start year from 1931 on finished positive.
-- **Real (inflation-adjusted):** **17** windows lost purchasing power, in two
-  clusters — the **Great Depression** (1928–1931) and the **1960s–70s stagflation
-  era** (1955, 1956, and 1959–1969). The worst was the **1929** start: **−55.7%** in
-  real terms over 20 years.
-- **Add 3% reinvested dividends** and the picture transforms: **zero** negative
-  nominal windows, and only **two** that still lost real purchasing power — start
-  years **1929 (−20.0%)** and **1962 (−1.3%)**.
+## Data & method (S&P 500 tool)
 
-The takeaway the widget is built to make tangible: dividends and time horizon do
-most of the heavy lifting, and "the market always goes up over 20 years" is mostly —
-but not entirely — true.
+- **Prices:** S&P 500 (`^GSPC`) year-end closes via Yahoo Finance, baked into the page as
+  annual returns (no live data calls).
+- **Inflation:** U.S. CPI-U (BLS series `CUUR0000SA0`, December values) — the index FRED
+  publishes seasonally adjusted as `CPIAUCSL`. CPIAUCSL begins in 1947; the underlying
+  CPI-U extends back to 1913, so real returns are available across the whole 1928–2025 range.
+- Returns are **price returns** (the dividend toggle adds an assumed flat 3%/yr). They are an
+  illustration, not investment advice.
 
-## Data & method
+The marble tool's outcomes are simulated live with the browser's random-number generator,
+so every run differs — that's the point.
 
-- **Index:** S&P 500 (`^GSPC`) year-end closing prices via Yahoo Finance, 1927–2025.
-  Data begins at year-end 1927, so the first full calendar-year return is 1928.
-- **Returns:** annual **price returns** = year-over-year change in the year-end close.
-  Dividends are excluded unless the dividends toggle is on.
-- **Inflation:** real returns deflate by U.S. CPI-U (BLS series `CUUR0000SA0`,
-  December values) — the same consumer price index the Federal Reserve publishes
-  seasonally adjusted as `CPIAUCSL`. CPI-U extends back to 1913, so inflation-adjusted
-  figures are available across the entire 1928–2025 range.
-- **Dividends:** the toggle applies a constant **3% annual yield, reinvested** (each
-  year's growth is multiplied by 1.03, compounding to ~1.81× over 20 years). This is a
-  simplification — the index's actual trailing yield was often 4–6% for much of the
-  20th century and below 2% in recent years — so it understates dividends for early
-  windows and slightly overstates them for recent ones.
-- **Window:** a start year *S* means buying at the start of year *S* and holding 20
-  years, through the end of *S*+19. Cumulative return compounds the annual returns;
-  annualized return is the compound annual growth rate (CAGR).
+---
 
-## How it's built
+## Deploying / hosting
 
-A **single, self-contained HTML file** (`index.html`, ~15 KB). The return and
-inflation series are baked in as JavaScript constants, so the widget makes **no API
-calls** and stores no data — its only external dependency is
-[Chart.js](https://www.chartjs.org/) (4.4.4), loaded from a CDN to draw the graph.
-No build step, no framework, no tracking. The layout is responsive (max-width 760px)
-and works on mobile.
+The site is served by **GitHub Pages** from `index.html` at the repo root on the `main`
+branch. To embed a tool elsewhere (e.g. a Medium article), link to its page on the Pages
+site — the tools are full, standalone pages.
 
 ## License
 
-Released under the **GNU General Public License v3.0** — see [`LICENSE`](LICENSE).
+See [LICENSE](LICENSE).
